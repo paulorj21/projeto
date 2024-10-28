@@ -9,8 +9,6 @@
 #define MAX_ARGS 10
 #define MAX_PROGS 10
 
-char path[] = "/bin/";
-
 int sepProg(char *progs[], char strProgs[]) {
     int progc = 0;
     char *ptr = strdup(strProgs);
@@ -38,7 +36,7 @@ void errorMsg() {
     write(STDERR_FILENO, error_message, strlen(error_message));
 }
 
-void buildFullPath(char fullPath[], char prog[]) {
+void buildFullPath(char fullPath[], char path[], char prog[]) {
     strcpy(fullPath, path);
     strcat(fullPath, prog);
 }
@@ -76,6 +74,7 @@ int main(int argc, char *argv[]) {
     char strArgs[100];
     char *argsv[MAX_ARGS];
     char *progs[MAX_PROGS];
+    char path[] = "/bin/";
 
     printf("Digite o programa e os argumentos:\n");
     scanf(" %[^\n]s", strArgs);
@@ -94,7 +93,7 @@ int main(int argc, char *argv[]) {
                     close(STDOUT_FILENO);
                     open(argsv[argsc - 1], O_CREAT|O_TRUNC|O_WRONLY, S_IRWXU);
                     char fullPath[10];
-                    buildFullPath(fullPath, argsv[0]);
+                    buildFullPath(fullPath, path, argsv[0]);
                     argsv[argsc - 1] = NULL;
                     execv(fullPath, argsv);
                 } else {
@@ -102,7 +101,7 @@ int main(int argc, char *argv[]) {
                 }
             } else {
                 char fullPath[10];
-                buildFullPath(fullPath, argsv[0]);
+                buildFullPath(fullPath, path, argsv[0]);
                 argsv[argsc] = NULL;
                 execv(fullPath, argsv);
             }
