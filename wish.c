@@ -31,6 +31,17 @@ void sepRed(char *tokens[], char str[]) {
     }
 }
 
+int sepProgs(char *programas[], char str[]) {
+    char *ptr = strdup(str);
+    int cont = 0;
+    while ((programas[cont] = strsep(&ptr, "&")) != NULL) {
+        if (programas[cont][0] != '\0' && strspn(programas[cont], " ") != strlen(programas[cont])) {
+            cont++;
+        }
+    }
+    return cont;
+}
+
 int verificarRed(char str[]) {
     int cont = 0;
     int i = 0;
@@ -47,7 +58,7 @@ int verificarRed(char str[]) {
         char *partes[2];
         sepRed(partes, str);
         int contArgs = sepArgs(argumentos, partes[1]);
-        if (contArgs > 1) {
+        if (contArgs != 1) {
             return 0;
         }
     }
@@ -73,39 +84,45 @@ int main(int argc, char *argv[]) {
         char *path2 = "/bin/";
 
         while (strcmp(buffer, "exit") != 0) {
-            char *argumentos[100];
-            int cont = sepArgs(argumentos, buffer);
-            argumentos[cont] = NULL;
-            pid_t pid = fork();  //cria um "clone" do processo que chamou
-            if (pid == 0) {  //processo filho
-                if (strchr(buffer, '>') != NULL) {
-                    if (verificarRed(buffer)) {
-                        redirecionar(argumentos, cont);
-                    } else {
-                        errorMsg();
+            char *programas[100];
+            int contProgs = sepProgs(programas, buffer);
+            for (int i = 0; i < contProgs; i++) {
+                char *argumentos[100];
+                int cont = sepArgs(argumentos, programas[i]);
+                argumentos[cont] = NULL;
+                pid_t pid = fork();  //cria um "clone" do processo que chamou
+                if (pid == 0) {  //processo filho
+                    if (strchr(programas[i], '>') != NULL) {
+                        if (verificarRed(programas[i])) {
+                            redirecionar(argumentos, cont);
+                        } else {
+                            errorMsg();
+                            exit(1);
+                        }
+                    }
+                    char aux[100];
+                    strcpy(aux, path2);
+                    strcat(aux, argumentos[0]);
+                    if (execv(aux, argumentos) == -1) {
+                        fprintf(stderr, "Execv failed\n");
                         exit(1);
                     }
-                }
-                char aux[100];
-                strcpy(aux, path2);
-                strcat(aux, argumentos[0]);
-                if (execv(aux, argumentos) == -1) {
-                    fprintf(stderr, "Execv failed\n");
+                } else if (pid < 0) { //erro do fork
+                    fprintf(stderr, "fork failed\n");
                     exit(1);
+                } else {
+                    
                 }
             }
-            else if (pid > 0) { //processo pai==shell
+            for (int i = 0; i < contProgs; i++) { //processo pai==shell
                 wait(NULL);
-                printf("wish> ");
-                tambuffer = 0;
-                buffer = NULL;
-                lidos = getline(&buffer, &tambuffer, stdin);
-                buffer[lidos-1] = '\0';
             }
-            else { //erro do fork
-                fprintf(stderr, "fork failed\n");
-                exit(1);
-            }
+            printf("wish> ");
+            tambuffer = 0;
+            buffer = NULL;
+            lidos = getline(&buffer, &tambuffer, stdin);
+            buffer[lidos-1] = '\0';
+            
 
         }
         exit(0);
